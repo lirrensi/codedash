@@ -4,7 +4,7 @@ const https = require('https');
 const { URL } = require('url');
 const { exec } = require('child_process');
 const { loadSessions, loadSessionDetail, deleteSession, getGitCommits, exportSessionMarkdown, getSessionPreview, searchFullText, getActiveSessions, getSessionReplay, getCostAnalytics } = require('./data');
-const { detectTerminals, openInTerminal } = require('./terminals');
+const { detectTerminals, openInTerminal, focusTerminalByPid } = require('./terminals');
 const { getHTML } = require('./html');
 
 function startServer(port, openBrowser = true) {
@@ -108,6 +108,19 @@ function startServer(port, openBrowser = true) {
     else if (req.method === 'GET' && pathname === '/api/active') {
       const active = getActiveSessions();
       json(res, active);
+    }
+
+    // ── Focus terminal ──────────────────────
+    else if (req.method === 'POST' && pathname === '/api/focus') {
+      readBody(req, body => {
+        try {
+          const { pid } = JSON.parse(body);
+          const ok = focusTerminalByPid(pid);
+          json(res, { ok });
+        } catch (e) {
+          json(res, { ok: false, error: e.message }, 400);
+        }
+      });
     }
 
     // ── Session preview ─────────────────────

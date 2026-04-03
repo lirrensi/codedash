@@ -157,4 +157,53 @@ function openInTerminal(sessionId, tool, flags, projectDir, terminalId) {
   }
 }
 
-module.exports = { detectTerminals, openInTerminal };
+// ── Focus existing terminal by PID ──────────────────────────
+
+function focusTerminalByPid(pid) {
+  const platform = process.platform;
+
+  if (platform === 'darwin') {
+    // Find which terminal app owns this PID's TTY, then activate it
+    try {
+      // Get TTY of the process
+      const ttyOut = execSync(`ps -p ${pid} -o tty= 2>/dev/null`, { encoding: 'utf8' }).trim();
+      if (!ttyOut) throw new Error('no tty');
+
+      // Try iTerm2 first — activate and select session by tty
+      try {
+        const script = `
+          tell application "iTerm"
+            activate
+            repeat with w in windows
+              repeat with t in tabs of w
+                repeat with s in sessions of t
+                  if tty of s contains "${ttyOut}" then
+                    select t
+                    return
+                  end if
+                end repeat
+              end repeat
+            end repeat
+          end tell
+        `;
+        execSync(`osascript -e '${script.replace(/'/g, "'\\''")}'`, { stdio: 'pipe', timeout: 3000 });
+        return true;
+      } catch {}
+
+      // Fallback: just activate iTerm2 or Terminal.app
+      try {
+        execSync(`osascript -e 'tell application "iTerm" to activate'`, { stdio: 'pipe' });
+        return true;
+      } catch {}
+      try {
+        execSync(`osascript -e 'tell application "Terminal" to activate'`, { stdio: 'pipe' });
+        return true;
+      } catch {}
+    } catch {}
+  }
+
+  // Linux/other: not much we can do without window manager integration
+  return false;
+}
+
+module.exports = { detectTerminals, openInTerminal, focusTerminalByPid };

@@ -1626,22 +1626,15 @@ function focusSession(sessionId) {
   var a = activeSessions[sessionId];
   if (!a) { showToast('Session not active'); return; }
 
-  // Use osascript via the launch API to focus the terminal window
-  var terminal = localStorage.getItem('codedash-terminal') || '';
-  fetch('/api/launch', {
+  fetch('/api/focus', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      sessionId: sessionId,
-      tool: a.kind === 'codex' ? 'codex' : 'claude',
-      flags: ['focus'],
-      project: a.cwd || '',
-      terminal: terminal,
-    })
-  }).then(function() {
-    showToast('Focused terminal');
+    body: JSON.stringify({ pid: a.pid })
+  }).then(function(r) { return r.json(); }).then(function(data) {
+    if (data.ok) showToast('Switched to terminal (PID ' + a.pid + ')');
+    else showToast('Could not focus — try clicking the terminal manually');
   }).catch(function() {
-    showToast('Could not focus terminal');
+    showToast('Focus failed');
   });
 }
 
