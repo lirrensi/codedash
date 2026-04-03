@@ -2,6 +2,7 @@
 
 const { loadSessions } = require('../src/data');
 const { startServer } = require('../src/server');
+const { exportArchive, importArchive } = require('../src/migrate');
 
 const DEFAULT_PORT = 3847;
 const args = process.argv.slice(2);
@@ -56,6 +57,22 @@ switch (command) {
     break;
   }
 
+  case 'export': {
+    const outPath = args[1] || `codedash-export-${new Date().toISOString().slice(0,10)}.tar.gz`;
+    exportArchive(outPath);
+    break;
+  }
+
+  case 'import': {
+    const archivePath = args[1];
+    if (!archivePath) {
+      console.error('  Usage: codedash import <archive.tar.gz>');
+      process.exit(1);
+    }
+    importArchive(archivePath);
+    break;
+  }
+
   case 'version':
   case '-v':
   case '--version': {
@@ -75,6 +92,8 @@ switch (command) {
     codedash run [port] [--no-browser]   Start the dashboard server
     codedash list [limit]                List sessions in terminal
     codedash stats                       Show session statistics
+    codedash export [file.tar.gz]        Export all sessions to archive
+    codedash import <file.tar.gz>        Import sessions from archive
     codedash help                        Show this help
     codedash version                     Show version
 
