@@ -219,6 +219,14 @@ function applyFilters() {
     return true;
   });
 
+  // Starred sessions first
+  filteredSessions.sort(function(a, b) {
+    var aStarred = stars.indexOf(a.id) >= 0 ? 1 : 0;
+    var bStarred = stars.indexOf(b.id) >= 0 ? 1 : 0;
+    if (aStarred !== bStarred) return bStarred - aStarred;
+    return b.last_ts - a.last_ts;
+  });
+
   render();
 }
 
@@ -863,6 +871,17 @@ async function confirmDelete() {
     if (data.ok) {
       showToast('Session deleted');
       allSessions = allSessions.filter(function(s) { return s.id !== pendingDelete.id; });
+      // Clear search if no more results
+      if (searchQuery) {
+        var remaining = allSessions.filter(function(s) {
+          return (s.project || '').toLowerCase().indexOf(searchQuery.toLowerCase()) >= 0 ||
+                 (s.first_message || '').toLowerCase().indexOf(searchQuery.toLowerCase()) >= 0;
+        });
+        if (remaining.length === 0) {
+          searchQuery = '';
+          document.querySelector('.search-box').value = '';
+        }
+      }
       closeConfirm();
       closeDetail();
       applyFilters();

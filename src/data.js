@@ -65,16 +65,30 @@ function scanCodexSessions() {
         const uuidMatch = basename.match(/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})/);
         if (!uuidMatch) continue;
         const sid = uuidMatch[1];
+        // Try to extract cwd from session_meta
+        let cwd = '';
+        try {
+          const firstLine = fs.readFileSync(f, 'utf8').split('\n')[0];
+          const meta = JSON.parse(firstLine);
+          if (meta.type === 'session_meta' && meta.payload && meta.payload.cwd) {
+            cwd = meta.payload.cwd;
+          }
+        } catch {}
+
         const existing = sessions.find(s => s.id === sid);
         if (existing) {
           existing.has_detail = true;
           existing.file_size = stat.size;
+          if (cwd && !existing.project) {
+            existing.project = cwd;
+            existing.project_short = cwd.replace(os.homedir(), '~');
+          }
         } else {
           sessions.push({
             id: sid,
             tool: 'codex',
-            project: '',
-            project_short: '',
+            project: cwd,
+            project_short: cwd ? cwd.replace(os.homedir(), '~') : '',
             first_ts: stat.mtimeMs,
             last_ts: stat.mtimeMs,
             messages: 0,
